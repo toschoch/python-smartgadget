@@ -15,7 +15,7 @@ pipeline {
     stage('Build') {
       steps {
         echo 'Building...'
-        sh 'uname'
+        sh 'echo "Hello World""'
       }
     }
   }
