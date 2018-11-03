@@ -1,7 +1,8 @@
 pipeline {
   agent {
     docker {
-      image 'alpine:3.8'
+      image 'python:3-alpine'
+      args '"/bin/ash"'
     }
 
   }
