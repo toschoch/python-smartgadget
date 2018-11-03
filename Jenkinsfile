@@ -2,7 +2,7 @@ pipeline {
   agent {
     docker {
       image 'python:3-alpine'
-      args '"/bin/ash"'
+      args 'exit()'
     }
 
   }
