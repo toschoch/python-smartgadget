@@ -2,7 +2,6 @@ pipeline {
   agent {
     docker {
       image 'python:3-alpine'
-      args 'exit()'
     }
 
   }
@@ -10,6 +9,7 @@ pipeline {
     stage('Test') {
       steps {
         echo 'Testing...'
+        sh 'exit()'
       }
     }
     stage('Build') {
