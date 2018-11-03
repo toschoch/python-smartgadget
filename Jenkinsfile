@@ -10,7 +10,7 @@ pipeline {
       steps {
         echo 'Testing...'
         sh 'pip install -r requirements.txt'
-        sh 'python setup.py test'
+        //sh 'python setup.py test'
       }
     }
     stage('Build') {
