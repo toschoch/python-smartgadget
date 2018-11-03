@@ -15,6 +15,7 @@ pipeline {
       steps {
         echo 'Building...'
         sh 'echo "Hello World"'
+        sh 'ls -la'
       }
     }
   }
