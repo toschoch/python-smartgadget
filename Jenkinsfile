@@ -25,18 +25,17 @@ pipeline {
     }
 
     stage('Deploy') {
-        steps {
-            echo 'Deploying...'
-            docker.image('mhoush/devpi-client').inside {
-                sh 'devpi use http://dietzi.ddns.net:3141/dietzi/staging'
-                sh 'devpi login ${DIETZI_DEVPI_USR} --password ${DIETZI_DEVPI_PSW}'
-                sh 'devpi upload dietzi/*.zip'
-                sh 'devpi upload dietzi/*.whl'
-          }
+      steps {
+        echo 'Deploying...'
+        docker.image('mhoush/devpi-client').inside {
+          sh 'devpi use http://dietzi.ddns.net:3141/dietzi/staging'
+          sh 'devpi login ${DIETZI_DEVPI_USR} --password ${DIETZI_DEVPI_PSW}'
+          sh 'devpi upload dietzi/*.zip'
+          sh 'devpi upload dietzi/*.whl'
         }
-      }
-    }
-  }
+       }
+     }
+   }
   post {
     success {
         archiveArtifacts artifacts: 'dist/*.zip'
