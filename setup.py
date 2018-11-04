@@ -52,7 +52,7 @@ install_requires = [x.strip() for x in all_reqs if 'git+' not in x]
 dependency_links = [x.strip() for x in all_reqs if x.startswith('git+')]
 
 setup(
-    name='python-smartgadgetmqtt',
+    name='smartgadgetmqtt',
     version=VERSION,
     setup_requires=['pytest-runner','pyyaml'],
     description='Reads temperature and humidity values from a Sensirion Smartgadget BLE device and broadcasts them to a MQTT broker',
