@@ -1,12 +1,15 @@
 node('docker') {
-    stage 'Checkout'
+    stage 'Checkout' {
         checkout scm
-    stage 'UnitTest'
+    }
+    stage 'UnitTest' {
         docker.image('python:3-alpine') { c ->
             sh python setup.py test
         }
-    stage 'Build'
+    }
+    stage 'Build' {
         docker.image('python:3-alpine') { c ->
-            sh python setup.py bdist-wheel
+            sh python setup.py bdist_wheel
         }
+    }
 }
