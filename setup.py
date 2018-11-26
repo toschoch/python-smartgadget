@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 from codecs import open
-from os import path
+from os import path, environ
 here = path.abspath(path.dirname(__file__))
 
 conda_env_file = "environment.yml"
 readme_file = "README.md"
 pip_req_file = "requirements.txt"
 
-VERSION = "0.0.1"
+VERSION = environ.get('VERSION',"0.0.1")
 
 def read(fname):
     with open(path.join(here,fname)) as fp:
