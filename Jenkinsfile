@@ -9,7 +9,8 @@ node('docker') {
     }
     stage('Build') {
         docker.image('python:3-alpine').inside {
-            sh 'VERSION=${env.BUILD_ID} python setup.py bdist_wheel'
+            env.VERSION=env.BUILD_ID
+            sh 'python setup.py bdist_wheel'
         }
     }
     stage('Publish') {
