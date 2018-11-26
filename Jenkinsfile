@@ -20,7 +20,7 @@ node('docker') {
                 sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
                 sh 'devpi login --password ${PASSWORD} ${USERNAME}'
             }
-            sh 'devpi upload /dist/*.whl'
+            sh 'devpi upload dist/*.whl'
         }
     }
 }
