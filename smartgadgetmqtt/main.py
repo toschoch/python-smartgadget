@@ -54,7 +54,7 @@ if __name__ == '__main__':
     print("battery=%d%%"%b)
 
     t0 = time.time()
-    #ph.subscribeTemperature()
+    ph.subscribeTemperature()
     #ph.subscribeRelativeHumidity()
     #ph.subscribeBatteryLevel()
     ph.listenForNotifications(20)
