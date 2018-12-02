@@ -15,11 +15,7 @@ node('docker') {
     }
     stage('Publish') {
         docker.build('upload','./dockerfiles/upload').withRun('-u root:root') {
-            withCredentials([usernamePassword(credentialsId: 'dietzi devpi', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
-                sh 'devpi login --password ${PASSWORD} ${USERNAME}'
-            }
-            sh 'devpi upload dist/*.whl'
+            sh 'ls -la /usr/bin'
 
         }
     }
