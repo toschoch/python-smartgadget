@@ -14,15 +14,13 @@ node('docker') {
         }
     }
     stage('Publish') {
-        docker.image('python:3-alpine').inside {
-            withEnv(["HOME=${env.WORKSPACE}"]) {
-                sh 'pip install devpi-client'
-                withCredentials([usernamePassword(credentialsId: 'dietzi devpi', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
-                    sh 'devpi login --password ${PASSWORD} ${USERNAME}'
-                }
-                sh 'devpi upload dist/*.whl'
+        docker.image('python:3-alpine').withRun('-u root:root').inside {
+            sh 'pip install devpi-client'
+            withCredentials([usernamePassword(credentialsId: 'dietzi devpi', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
+                sh 'devpi login --password ${PASSWORD} ${USERNAME}'
             }
+            sh 'devpi upload dist/*.whl'
 
         }
     }
