@@ -1,7 +1,5 @@
-FROM python:2.7-alpine
+FROM python:3-alpine
 
-RUN pip install \
-    devpi-client \
-    virtualenv
+RUN pip devpi-client
 
 CMD ["ash"]
