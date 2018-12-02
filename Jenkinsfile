@@ -14,8 +14,11 @@ node('docker') {
         }
     }
     stage('Publish') {
-        docker.image('python:3-alpine').withRun('-u root:root') {
-            sh 'pip3 install devpi-client'
+        docker.build('upload','./dockerfiles/upload').withRun('-u root:root') {
+            sh '''#!/bin/ash
+                devpi
+            '''
+            sh 'python -m devpi'
             withCredentials([usernamePassword(credentialsId: 'dietzi devpi', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                 sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
                 sh 'devpi login --password ${PASSWORD} ${USERNAME}'
