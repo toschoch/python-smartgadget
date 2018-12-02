@@ -1,5 +1,5 @@
 FROM python:3-alpine
 
-RUN pip devpi-client
+RUN pip3 install devpi-client
 
 CMD ["ash"]
