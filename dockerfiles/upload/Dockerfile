@@ -1,6 +1,6 @@
 FROM python:3-alpine
 
-RUN pip3 install devpi-client
+RUN pip install devpi-client
 
 USER root
 
