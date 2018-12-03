@@ -8,9 +8,9 @@ node('docker') {
         }
     }
     stage('Build') {
-        def shorthash = sh(returnStdout: true, script: "git rev-parse --short HEAD").trim()
-        def version = '-e VERSION='+shorthash
+        def version = getGitVersion()
         echo version
+        version = '-e VERSION='+version
         docker.image('python:3-alpine').inside(version) {
             sh 'rm -r ./dist'
             sh 'python setup.py bdist_wheel'
@@ -25,4 +25,19 @@ node('docker') {
             sh 'devpi upload dist/*.whl'
         }
     }
+}
+
+String getGitVersion() {
+
+    version = sh(script: "git describe --tags --long --dirty", returnStdout: true)?.trim()
+    def parts = version.split('-')
+    assert len(parts) in [3, 4]
+    def dirty = len(parts) == 4
+    def tag = parts[0]
+    def count = parts[1]
+    def sha = parts[2]
+    if (count == '0' && !dirty) {
+        return tag
+    }
+    return sprintf( '%1$s.dev%2$s+%3$s', [tag, count, sha.substring(1)])
 }
