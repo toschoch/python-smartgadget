@@ -41,8 +41,11 @@ class LoggingService(object):
         self.LoggerIntervalMs = chars[4]
 
     def retrieve(self):
-        self.SyncTimeMs.write(b'\x00\x00\x00\x00')
-        self.StartLoggerDownload.write(b'\x01')
+        self.SyncTimeMs.write(b'\xd2\x1fPpg\x01\x00\x00')
+        self.OldestTimestampMs.write(b'\x00\x00\x00\x00\x00\x00\x00\x00')
+        self.NewestTimestampMs.write(b'\xd2\x1fPpg\x01\x00\x00')
+        self.NewestTimestampMs.read()
+        self.StartLoggerDownload.write(b'\x01\x00\x00\x00\x00\x00\x00\x00')
 
 
 class SubscribableService(object):
@@ -89,6 +92,7 @@ class ValueService(SubscribableService):
     @property
     def description(self):
         return self._cached_description
+
 
 
 class HumiGadget(BTLEDevice, DefaultDelegate):

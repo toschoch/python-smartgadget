@@ -9,7 +9,7 @@ node('docker') {
     }
     stage('Build') {
         docker.image('python:3-alpine').inside {
-            env.VERSION=env.GIT_COMMIT
+            env.VERSION = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
             sh 'python setup.py bdist_wheel'
         }
     }

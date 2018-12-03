@@ -1,6 +1,6 @@
 from bluepy.btle import Scanner, DefaultDelegate, ScanEntry, Peripheral, UUID, ADDR_TYPE_RANDOM
-import struct
 import time
+import struct
 import logging
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
@@ -37,16 +37,6 @@ if __name__ == '__main__':
         print("  connectable: %s" % dev.connectable)
 
     ph = devs.HumiGadget('f2:70:95:f3:43:44', ADDR_TYPE_RANDOM)
-#     ph.discoverServices()
-#     srvs = ph.getServices()
-#     for srv in srvs:
-#         print("Service: %s" % srv.uuid)
-#         for ch in srv.getCharacteristics():
-#             print("   %s (%s)" % (ch, ch.propertiesToString()))
-#             if ch.supportsRead():
-# #                value = struct.unpack('<f',ch.read())
-#                 print("   = %s" % ch.read())
-
 
     print("T=%.2f°C"%ph.readTemperature())
     print("RH=%.2f%%"%ph.readRelativeHumidity())
@@ -54,12 +44,15 @@ if __name__ == '__main__':
     print("battery=%d%%"%b)
 
     t0 = time.time()
-    ph.subscribeTemperature()
+    ph.Logging.retrieve()
+    logging.info("start logging download...")
+
+    ph.listenForNotifications(20)
+    #ph.subscribeTemperature()
+
     #ph.subscribeRelativeHumidity()
     #ph.subscribeBatteryLevel()
-    ph.listenForNotifications(20)
-
-
-
+    time.sleep(10)
+    logging.info("stop logging download...")
 
     ph.disconnect()
