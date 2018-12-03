@@ -37,7 +37,8 @@ node('docker') {
     stage('Checkout') {
         echo "${scm.extensions}"
         scm.extensions.add([$class: 'CloneOption', noTags: false, reference: '', shallow: false])
-        scm.extensions.removeAt(0)
+        scm.extensions.remove(0)
+        echo "${scm.extensions}"
         checkout scm
     }
     stage('UnitTest') {
