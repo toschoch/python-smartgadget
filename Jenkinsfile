@@ -27,17 +27,38 @@ node('docker') {
     }
 }
 
-String getGitVersion() {
-
-    version = sh(script: "git describe --tags --long --dirty", returnStdout: true)?.trim()
-    def parts = version.split('-')
-    assert len(parts) in [3, 4]
-    def dirty = len(parts) == 4
-    def tag = parts[0]
-    def count = parts[1]
-    def sha = parts[2]
-    if (count == '0' && !dirty) {
-        return tag
+/** @return The tag name, or `null` if the current commit isn't a tag. */
+String gitVersion() {
+    commit = getCommit()
+    if (commit) {
+        desc = sh(script: "git describe --tags --long --dirty ${commit}", returnStdout: true)?.trim()
+        def parts = desc.split('-')
+        assert len(parts) in [3, 4]
+        def dirty = len(parts) == 4
+        def tag = parts[0]
+        def count = parts[1]
+        def sha = parts[2]
+        if (count == '0' && !dirty) {
+            return tag
+        }
+        return sprintf( '%1$s.dev%2$s+%3$s', [tag, count, sha.substring(1)])
     }
-    return sprintf( '%1$s.dev%2$s+%3$s', [tag, count, sha.substring(1)])
+    return null
+}
+
+String getCommit() {
+    return sh(script: 'git rev-parse HEAD', returnStdout: true)?.trim()
+}
+
+@NonCPS
+boolean isTag() {
+    commit = getCommit()
+    if (commit) {
+        desc = sh(script: "git describe --tags --long --dirty ${commit}", returnStdout: true)?.trim()
+        match = desc =~ /.+-[0-9]+-g[0-9A-Fa-f]{6,}$/
+        result = !match
+        match = null // prevent serialisation
+        return result
+    }
+    return false
 }
