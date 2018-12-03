@@ -44,7 +44,7 @@ node('docker') {
     }
 
     stage('Build') {
-        version = getGitVersion()
+        version = gitVersion()
         echo version
         version = '-e VERSION='+version
         docker.image('python:3-alpine').inside(version) {
