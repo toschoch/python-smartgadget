@@ -7,7 +7,7 @@ def gitVersion() {
     desc = sh(script: "git describe --tags --long --dirty", returnStdout: true)?.trim()
     parts = desc.split('-')
     assert parts.size() in [3, 4]
-    dirty = len(parts) == 4
+    dirty = (parts.size() == 4)
     tag = parts[0]
     count = parts[1]
     sha = parts[2]
