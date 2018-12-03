@@ -36,7 +36,8 @@ def isTag() {
 node('docker') {
     stage('Checkout') {
         echo "${scm.extensions}"
-        scm.extensions[0] = [$class: 'CloneOption', noTags: false, reference: '', shallow: false]
+        scm.extensions.add([$class: 'CloneOption', noTags: false, reference: '', shallow: false])
+        scm.extensions.removeAt(0)
         checkout scm
     }
     stage('UnitTest') {
