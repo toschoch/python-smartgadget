@@ -12,6 +12,7 @@ node('docker') {
         def version = '-e VERSION='+shorthash
         echo version
         docker.image('python:3-alpine').inside(version) {
+            sh 'rm -r ./dist'
             sh 'python setup.py bdist_wheel'
         }
     }
