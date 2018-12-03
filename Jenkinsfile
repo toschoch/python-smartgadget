@@ -6,7 +6,7 @@ def getCommit() {
 def gitVersion() {
     desc = sh(script: "git describe --tags --long --dirty", returnStdout: true)?.trim()
     parts = desc.split('-')
-    assert len(parts) in [3, 4]
+    assert parts.size() in [3, 4]
     dirty = len(parts) == 4
     tag = parts[0]
     count = parts[1]
