@@ -8,7 +8,9 @@ node('docker') {
         }
     }
     stage('Build') {
-        def version = '-e VERSION='+env['GIT_COMMIT']
+        def shorthash = sh(returnStdout: true, script: "git rev-parse --short HEAD").trim()
+        def version = '-e VERSION='+shorthash
+        echo version
         docker.image('python:3-alpine').inside(version) {
             sh 'python setup.py bdist_wheel'
         }
