@@ -8,7 +8,7 @@ node('docker') {
         }
     }
     stage('Build') {
-        docker.image('python:3-alpine').inside('-e VERSION=${env.GIT_COMMIT') {
+        docker.image('python:3-alpine').inside('-e VERSION=${env.GIT_COMMIT}') {
             sh 'python setup.py bdist_wheel'
         }
     }
