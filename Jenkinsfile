@@ -6,6 +6,7 @@ def getCommit() {
 def gitVersion() {
     commit = getCommit()
     if (commit) {
+        sh(script: "git fetch --unshallow")
         desc = sh(script: "git describe --tags --long --dirty ${commit}", returnStdout: true)?.trim()
         parts = desc.split('-')
         assert len(parts) in [3, 4]
@@ -24,6 +25,7 @@ def gitVersion() {
 def isTag() {
     commit = getCommit()
     if (commit) {
+        sh(script: "git fetch --unshallow")
         desc = sh(script: "git describe --tags --long --dirty ${commit}", returnStdout: true)?.trim()
         match = desc =~ /.+-[0-9]+-g[0-9A-Fa-f]{6,}$/
         result = !match
