@@ -49,9 +49,22 @@ node('docker') {
         }
     }
     stage('Publish') {
-        docker.build('upload','./dockerfiles/upload').inside('-u root:root') { c ->
-            withCredentials([usernamePassword(credentialsId: 'dietzi devpi', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                sh 'devpi use http://devpi.dietzi.mywire.org/${USERNAME}/staging'
+
+        devpiUrl = "http://devpi.dietzi.mywire.org"
+
+        index = "staging"
+        if (isTag()) {
+            index = "stable"
+        }
+        echo "deploy to '${devpiUrl}' to the '${index}' index..."
+        docker
+        .build('upload','./dockerfiles/upload')
+        .inside("-u root:root -e INDEX='${index}'-e URL='${devpiUrl}'") { c ->
+            withCredentials([
+                usernamePassword(credentialsId: 'dietzi devpi', 
+                usernameVariable: 'USERNAME', 
+                passwordVariable: 'PASSWORD')]) {
+                sh 'devpi use ${URL}/${USERNAME}/${INDEX}'
                 sh 'devpi login --password ${PASSWORD} ${USERNAME}'
             }
             sh 'devpi upload dist/*.whl'
