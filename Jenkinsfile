@@ -58,7 +58,7 @@ node('docker') {
         }
         echo "deploy to '${devpiUrl}' to the '${index}' index..."
         docker
-        .build('upload','./dockerfiles/upload')
+        .image('shocki/alpine-devpi-client')
         .inside("-u root:root -e INDEX=${index} -e URL=${devpiUrl}") { c ->
             withCredentials([
                 usernamePassword(credentialsId: 'dietzi devpi', 
