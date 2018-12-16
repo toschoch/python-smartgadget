@@ -59,7 +59,7 @@ node('docker') {
         echo "deploy to '${devpiUrl}' to the '${index}' index..."
         docker
         .build('upload','./dockerfiles/upload')
-        .inside("-u root:root -e INDEX=${index} -e URL=${devpiUrl}") { c ->
+        .inside("-u root:root -e INDEX=${index} -e URL=${devpiUrl} /bin/ash") { c ->
             withCredentials([
                 usernamePassword(credentialsId: 'dietzi devpi', 
                 usernameVariable: 'USERNAME', 
