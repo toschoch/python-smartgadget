@@ -40,7 +40,7 @@ node('docker') {
 
         docker
         .image('shocki/alpine-devpi-client')
-        .inside("-u jenkins:root -e INDEX=${index} -e URL=${devpiUrl}") {
+        .inside("-u root:root -e INDEX=${index} -e URL=${devpiUrl} --entrypoint /bin/sh") {
             withCredentials([
                 usernamePassword(credentialsId: 'dietzi devpi', 
                 usernameVariable: 'USERNAME', 
