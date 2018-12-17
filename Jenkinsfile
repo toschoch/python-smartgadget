@@ -12,21 +12,21 @@ node('docker') {
         }
     }
 
-    stage('UnitTest') {
-        docker.image('python:3-alpine').inside {
-            sh 'python setup.py test'
-        }
-    }
+    // stage('UnitTest') {
+    //     docker.image('python:3-alpine').inside {
+    //         sh 'python setup.py test'
+    //     }
+    // }
 
-    stage('Build') {
-        version = gitVersion()
-        echo version
-        version = '-e VERSION='+version
-        docker.image('python:3-alpine').inside(version) {
-            sh 'rm -rf ./dist'
-            sh 'python setup.py bdist_wheel'
-        }
-    }
+    // stage('Build') {
+    //     version = gitVersion()
+    //     echo version
+    //     version = '-e VERSION='+version
+    //     docker.image('python:3-alpine').inside(version) {
+    //         sh 'rm -rf ./dist'
+    //         sh 'python setup.py bdist_wheel'
+    //     }
+    // }
     
     stage('Publish') {
 
@@ -37,9 +37,10 @@ node('docker') {
             index = "stable"
         }
         echo "deploy to '${devpiUrl}' to the '${index}' index..."
+
         docker
         .image('shocki/alpine-devpi-client')
-        .inside("-u root:root -e INDEX=${index} -e URL=${devpiUrl}") { c ->
+        .inside("-u jenkins:root -e INDEX=${index} -e URL=${devpiUrl}") {
             withCredentials([
                 usernamePassword(credentialsId: 'dietzi devpi', 
                 usernameVariable: 'USERNAME', 
