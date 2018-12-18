@@ -7,8 +7,6 @@ conda_env_file = "environment.yml"
 readme_file = "README.md"
 pip_req_file = "requirements.txt"
 
-VERSION = environ.get('VERSION',"0.0.1")
-
 def read(fname):
     with open(path.join(here,fname)) as fp:
         content = fp.read()
@@ -37,8 +35,8 @@ dependency_links = [x.strip() for x in all_reqs if x.startswith('git+')]
 
 setup(
     name='smartgadgetmqtt',
-    version=VERSION,
-    setup_requires=['pytest-runner'],
+    version_format='{tag}.dev{commitcount}+{gitsha}',
+    setup_requires=['pytest-runner','setuptools-git-version'],
     description='Reads temperature and humidity values from a Sensirion Smartgadget BLE device and broadcasts them to a MQTT broker',
     long_description=long_description,
     classifiers=[
