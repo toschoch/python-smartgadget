@@ -10,6 +10,7 @@ steps:
   - name: build
     image: python:3-alpine
     commands:
+      - apk update && apk add --no-cache git
       - pip install --upgrade pip setuptools wheel
       - python setup.py bdist_wheel
       - python setup.py sdist --formats=zip
@@ -17,6 +18,7 @@ steps:
   - name: publish
     image: shocki/alpine-devpi-client
     commands:
+      - apk update && apk add --no-cache git
       - devpi use http://devpi.dietzi.mywire.org
       - devpi login dietzi
       - devpi upload dist/*.whl
