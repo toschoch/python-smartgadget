@@ -1,3 +1,5 @@
+.secrets
+
 *.py[cod]
 
 # C extensions
