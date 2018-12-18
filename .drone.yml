@@ -1,4 +1,5 @@
 kind: pipeline
+name: python-package
 
 steps:
   - name: test
