@@ -10,6 +10,29 @@ Reads temperature and humidity values from a Sensirion Smartgadget BLE device an
 
 Change-Log
 ----------
+##### 0.0.3
+* added dummy .secrets file for local drone execution
+* added tagging stage and secrets
+* named drone pipeline
+* added git in the correct image now
+* add git to the image before build and test
+* add .drone.yml file for ci
+* add another --entrypoint try
+* another try
+* remove latest
+* latest image tag
+* fixed isTag() and versions code in jenkinsfile
+* removed entrypoint from jenkinsfile devpi image
+* override entrypoint
+* remove ash from arguments
+* test with command ash
+* use the devpi client image from docker
+* does not work with shitty jenkins docker support
+* make devpi client upload image more general purpose
+* try entrypoint only as command seem to interfere with .inside()
+* make jenkins not complain if the binaries do not exist
+* fixed entrypoint and command for devpi upload image
+
 ##### 0.0.2
 * fixed string interpolation in Jenkinsfile
 * add Jeninksfile
