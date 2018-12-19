@@ -1,3 +1,4 @@
 paho-mqtt
-#bluepy
+bluepy
 pyyaml
+apscheduler

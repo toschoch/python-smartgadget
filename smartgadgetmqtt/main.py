@@ -1,36 +1,19 @@
-from bluepy.btle import Scanner, DefaultDelegate, ScanEntry, Peripheral, UUID, ADDR_TYPE_RANDOM
+from bluepy.btle import Scanner, ADDR_TYPE_RANDOM
 import time
 import struct
 import logging
+from queue import Queue
+import apscheduler as aps
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
 if __name__ == '__main__':
     import devices as devs
+    import ble_scanner as sc
 
-    class ScanDelegate(DefaultDelegate):
-        def __init__(self):
-            DefaultDelegate.__init__(self)
-            self.gadgets = []
+    gadgets = sc.SmartGadgetScanner().scan()
 
-
-        def handleDiscovery(self, dev, isNewDev, isNewData):
-            if isNewDev:
-                for (a, d, v) in dev.getScanData():
-                    if d == "Complete Local Name" and v=="Smart Humigadget":
-                        print("Discovered humigadget", dev.addr, dev.rssi)
-                        self.gadgets.append(dev)
-                print("Discovered device", dev.addr)
-            elif isNewData:
-                print("Received new data from", dev.addr)
-
-
-
-    delegate = ScanDelegate()
-    scanner = Scanner().withDelegate(delegate)
-    devices = scanner.scan(10.0)
-
-    for dev in delegate.gadgets:
+    for dev in gadgets:
         print("Device %s (%s), RSSI=%d dB" % (dev.addr, dev.addrType, dev.rssi))
         for (adtype, desc, value) in dev.getScanData():
             print("  %s = %s" % (desc, value))
