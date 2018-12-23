@@ -144,6 +144,8 @@ class LoggingService(object):
 
     n_samples_to_download: int
 
+    DOWNLOAD_TIMEOUT=10
+
     def __init__(self, srv: _Service, *args, **kwargs):
         chars = srv.getCharacteristics()
         assert len(chars) == 5
@@ -209,6 +211,7 @@ class LoggingService(object):
         self.newest_time = newest_time
         self.interval = interval
         # set the delegate temporary to the logging service
+        self.time_start_download = time.time()
         self.peripheral.withDelegate(self)
         self.n_samples_to_download = n_samples_to_download
         self.StartLoggerDownload.write(1)
@@ -222,6 +225,8 @@ class LoggingService(object):
         log.debug("data length: {}".format(len(data)))
 
         if len(data)<=4:
+            if (time.time() - self.time_start_download) >= self.DOWNLOAD_TIMEOUT:
+                self.on_download_failed()
             return self.peripheral.handleNotification(cHandle, data)
 
         seq_number = struct.unpack('<I',data[:4])[0]

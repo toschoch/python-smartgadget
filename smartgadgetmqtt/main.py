@@ -14,12 +14,16 @@ if __name__ == '__main__':
     gadgets = sc.SmartGadgetScanner().scan()
 
     ph = devs.SmartGadget('f2:70:95:f3:43:44')
+    ph2 = devs.SmartGadget('e2:07:bc:53:40:61')
 
     print("T=%.2f°C" % ph.read_temperature())
     print("RH=%.2f%%" % ph.read_relative_humidity())
     b = ph.read_battery_level()
     print("battery=%d%%"%b)
-
+    print("T=%.2f°C" % ph2.read_temperature())
+    print("RH=%.2f%%" % ph2.read_relative_humidity())
+    b = ph2.read_battery_level()
+    print("battery=%d%%" % b)
 
     #ph.subscribe_battery_level()
     #ph.subscribe_relative_humidity()
@@ -34,4 +38,7 @@ if __name__ == '__main__':
     print(len(ph.Logging.data))
     print(ph.Logging.data)
 
+    ph2.subscribe_temperature()
+
     ph.listen_for_notifications(5)
+    ph2.listen_for_notifications(5)
