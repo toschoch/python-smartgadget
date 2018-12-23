@@ -13,29 +13,15 @@ if __name__ == '__main__':
 
     gadgets = sc.SmartGadgetScanner().scan()
 
-    for dev in gadgets:
-        print("Device %s (%s), RSSI=%d dB" % (dev.addr, dev.addrType, dev.rssi))
-        for (adtype, desc, value) in dev.getScanData():
-            print("  %s = %s" % (desc, value))
-        print("  connectable: %s" % dev.connectable)
+    ph = devs.SmartGadget('f2:70:95:f3:43:44')
 
-    ph = devs.HumiGadget('f2:70:95:f3:43:44', ADDR_TYPE_RANDOM)
-
-    print("T=%.2f°C"%ph.readTemperature())
-    print("RH=%.2f%%"%ph.readRelativeHumidity())
-    b = ph.readBatteryLevel()
+    print("T=%.2f°C" % ph.read_temperature())
+    print("RH=%.2f%%" % ph.read_relative_humidity())
+    b = ph.read_battery_level()
     print("battery=%d%%"%b)
 
-    t0 = time.time()
-    ph.Logging.retrieve()
-    logging.info("start logging download...")
+    ph.subscribe_relative_humidity()
+    ph.subscribe_temperature()
+    ph.subscribe_battery_level()
 
-    ph.listenForNotifications(20)
-    #ph.subscribeTemperature()
-
-    #ph.subscribeRelativeHumidity()
-    #ph.subscribeBatteryLevel()
-    time.sleep(10)
-    logging.info("stop logging download...")
-
-    ph.disconnect()
+    ph.listen_for_notifications(20)
