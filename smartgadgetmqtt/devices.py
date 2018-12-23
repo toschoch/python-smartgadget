@@ -68,7 +68,7 @@ class Characteristic(_Characteristic):
 
         return bytes
 
-    def pack_data(self, data, expected_byte_count=None):
+    def pack_data(self, data):
 
         if self.byte_format:
             data = struct.pack(self.byte_format, data)
@@ -79,8 +79,8 @@ class Characteristic(_Characteristic):
         data = _Characteristic.read(self)
         return self.unpack_data(data)
 
-    def write(self, value, with_response=False, expected_byte_count=None):
-        data = self.pack_data(value, expected_byte_count)
+    def write(self, value, with_response=False):
+        data = self.pack_data(value)
         return _Characteristic.write(self, data, with_response)
 
     def description_read(self):
@@ -142,9 +142,12 @@ class Float32Service(SubscribableCharacteristic):
 
 class LoggingService(object):
 
+    n_samples_to_download: int
+
     def __init__(self, srv: _Service, *args, **kwargs):
         chars = srv.getCharacteristics()
         assert len(chars) == 5
+        self.peripheral = srv.peripheral
 
         self.SyncTimeMs = Characteristic(chars[0],
                                          description_handle_offset=1,
@@ -162,12 +165,22 @@ class LoggingService(object):
                                                description_handle_offset=1,
                                                byte_format='<I', *args, **kwargs)
 
+        self.data = []
+        self.oldest_time = 0
+        self.newest_time = 0
+        self.interval = 0
+
+        self.n_samples_to_download = 0
+        self.n_samples_downloaded = 0
+
     @property
     def description(self):
         return "Logging Service"
 
     def start_download(self):
+
         log.info("initiate download....")
+
         interval = self.LoggerIntervalMs.read()
         log.info("read logging interval: {0} ms".format(interval))
 
@@ -175,7 +188,7 @@ class LoggingService(object):
         log.info("wrote oldest timestamp: {0} ms".format(0))
 
         time_ms = int(time.time_ns() / 1000000.)
-        self.SyncTimeMs.write(time_ms, expected_byte_count=4)
+        self.SyncTimeMs.write(time_ms)
         log.info("wrote sync time: {} ms".format(time_ms))
 
         time.sleep(0.5)
@@ -186,13 +199,78 @@ class LoggingService(object):
         oldest_time = self.OldestTimestampMs.read()
         log.info("read oldest timestamp: {0} ms".format(oldest_time))
 
-        n_logging_samples = int((newest_time - oldest_time) / interval)
+        n_samples_to_download = int((newest_time - oldest_time) / interval)
         logging_time = datetime.timedelta(milliseconds=newest_time - oldest_time)
-        log.info("devices has {} samples ({}) in memory".format(n_logging_samples, logging_time))
+        log.info("devices has {} samples ({}) in memory".format(n_samples_to_download, logging_time))
 
         log.info("start download....")
-        self.StartLoggerDownload.write(1, expected_byte_count=2)
+        self.data.clear()
+        self.oldest_time = oldest_time
+        self.newest_time = newest_time
+        self.interval = interval
+        # set the delegate temporary to the logging service
+        self.peripheral.withDelegate(self)
+        self.n_samples_to_download = n_samples_to_download
+        self.StartLoggerDownload.write(1)
 
+    def _sample_number_to_time(self, sample):
+        return self.newest_time - (self.n_samples_to_download - sample) * self.interval
+
+    def handleNotification(self, cHandle, data):
+
+        log.debug("arrived a download notification: {}".format(cHandle))
+        log.debug("data length: {}".format(len(data)))
+
+        if len(data)<=4:
+            return self.peripheral.handleNotification(cHandle, data)
+
+        seq_number = struct.unpack('<I',data[:4])[0]
+        log.debug("sequence {} arrived!".format(seq_number))
+
+        if seq_number != self.n_samples_downloaded+1:
+
+            log.warning("download missed sequence {}! Continue with sequence {}".format(self.n_samples_downloaded+1,
+                                                                                        seq_number))
+
+        assert (len(data) - 4) % 4 == 0
+        seq_length = (len(data) - 4) // 4
+
+        stream = list((self._sample_number_to_time(seq_number + i-1), d[0]) for i, d in enumerate(struct.iter_unpack('<f',data[4:])))
+        assert len(stream) == seq_length
+        self.data.extend(stream)
+
+        log.debug("sequence: {}".format(stream))
+
+        self.n_samples_downloaded = seq_number + seq_length - 1
+
+        if (self.n_samples_to_download - self.n_samples_downloaded) == 0:
+            self.on_download_finished()
+        elif (self.n_samples_to_download - self.n_samples_downloaded) < 0:
+            self.on_download_failed()
+
+
+    def on_download_failed(self):
+        pass
+        self.on_download_finished()
+
+    def on_download_finished(self):
+        self.StartLoggerDownload.write(0)
+        self.peripheral.withDelegate(self.peripheral)
+        log.info("Download finished! (expected: {}, downloaded: {}, {})".format(self.n_samples_to_download,
+                                                                            len(self.data),
+                                                                            self.n_samples_downloaded))
+        self.n_samples_to_download = 0
+        self.n_samples_downloaded = 0
+
+    @property
+    def downloading(self):
+        return self.n_samples_to_download > 0
+
+    def progress(self):
+        if self.n_samples_to_download > 0:
+            return float(self.n_samples_downloaded)*100./self.n_samples_to_download
+        else:
+            return 0
 
 class SmartGadget(BLEDevice, DefaultDelegate):
 
@@ -248,7 +326,7 @@ class SmartGadget(BLEDevice, DefaultDelegate):
                     continue
         else:
             t0 = time.time()
-            while time.time() - t0 < 20:
+            while time.time() - t0 < seconds:
                 if self.waitForNotifications(1.0):
                     continue
 

@@ -5,7 +5,7 @@ import logging
 from queue import Queue
 import apscheduler as aps
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
 if __name__ == '__main__':
     import devices as devs
@@ -22,8 +22,16 @@ if __name__ == '__main__':
 
 
     #ph.subscribe_battery_level()
-    ph.subscribe_relative_humidity()
+    #ph.subscribe_relative_humidity()
     ph.subscribe_temperature()
     ph.Logging.start_download()
 
-    ph.listen_for_notifications(20)
+    while ph.Logging.downloading:
+        ph.listen_for_notifications(0.5)
+        if ph.Logging.downloading:
+            logging.info("downloading {:.0f}%".format(ph.Logging.progress()))
+
+    print(len(ph.Logging.data))
+    print(ph.Logging.data)
+
+    ph.listen_for_notifications(5)
