@@ -20,8 +20,10 @@ if __name__ == '__main__':
     b = ph.read_battery_level()
     print("battery=%d%%"%b)
 
+
+    #ph.subscribe_battery_level()
     ph.subscribe_relative_humidity()
     ph.subscribe_temperature()
-    ph.subscribe_battery_level()
+    ph.Logging.start_download()
 
     ph.listen_for_notifications(20)

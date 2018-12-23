@@ -3,6 +3,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class SmartGadgetScanner(DefaultDelegate):
     def __init__(self, gadgets=[]):
         DefaultDelegate.__init__(self)
@@ -15,6 +16,7 @@ class SmartGadgetScanner(DefaultDelegate):
                 if d == "Complete Local Name" and v== "Smart Humigadget":
                     log.info("Discovered smart gadget ({0}, {1} db)...".format(dev.addr, dev.rssi))
                     self._gadgets.append(dev)
+                    return
             log.debug("Discovered device ({0}, {1} db)...".format(dev.addr, dev.rssi))
         elif isNewData:
             log.debug("Received new data from {0}...".format(dev.addr))

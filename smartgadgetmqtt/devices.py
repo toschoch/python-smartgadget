@@ -1,15 +1,16 @@
-from bluepy.btle import Service, DefaultDelegate, \
-    Peripheral, UUID, BTLEException, ScanEntry, Characteristic as BTLECharacteristic, \
+from bluepy.btle import Service as _Service, DefaultDelegate, \
+    Peripheral, UUID, BTLEException, ScanEntry, Characteristic as _Characteristic, Descriptor, \
     ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM
 
 import struct
 import time
 import logging
+import datetime
 
 log = logging.getLogger(__name__)
 
 
-class BTLEDevice(Peripheral):
+class BLEDevice(Peripheral):
 
     def __init__(self, device_addr, addr_type=ADDR_TYPE_PUBLIC, iface=None):
         Peripheral.__init__(self, device_addr, addr_type, iface)
@@ -32,121 +33,168 @@ class BTLEDevice(Peripheral):
             return False
 
 
-class Characteristic(object):
+class Characteristic(_Characteristic):
 
-    def __init__(self, characteristic: BTLECharacteristic):
-        self._original_characteristic = characteristic
-        self.write_handle = self.handle + 1
+    def __init__(self,
+                 characteristic: _Characteristic,
+                 description_handle_offset=None,
+                 byte_format=None, nbytes=1):
+
+        _Characteristic.__init__(self,
+                                 characteristic.peripheral,
+                                 characteristic.uuid,
+                                 characteristic.handle,
+                                 characteristic.properties,
+                                 characteristic.valHandle)
+
+        self.byte_format = byte_format
+        self.nbytes = nbytes
+
+        if description_handle_offset is None:
+            self._description_read = self.uuid.getCommonName
+        else:
+            self._description_desc = Descriptor(self.peripheral, self.uuid, self.valHandle + description_handle_offset)
+            self._description_read = self._description_desc.read
+
+        self._description_cache = self.description_read()
+
+    def unpack_data(self, bytes):
+
+        if self.byte_format:
+            bytes = struct.unpack(self.byte_format, bytes)
+            assert len(bytes) == self.nbytes
+            if self.nbytes == 1:
+                bytes = bytes[0]
+
+        return bytes
+
+    def pack_data(self, data, expected_byte_count=None):
+
+        if self.byte_format:
+            data = struct.pack(self.byte_format, data)
+
+        return data
 
     def read(self):
-        return self._original_characteristic.read()
+        data = _Characteristic.read(self)
+        return self.unpack_data(data)
 
-    def write(self, value, with_response=False):
-        return self.peripheral.writeCharacteristic(self.write_handle,
-                                                        val=value,
-                                                        withResponse=with_response)
+    def write(self, value, with_response=False, expected_byte_count=None):
+        data = self.pack_data(value, expected_byte_count)
+        return _Characteristic.write(self, data, with_response)
 
-    @property
-    def handle(self):
-        return self._original_characteristic.getHandle()
-
-    @property
-    def peripheral(self):
-        return self._original_characteristic.peripheral
-
-
-class DescribedCharacteristic(Characteristic):
-
-    def __init__(self, characteristic: BTLECharacteristic):
-        Characteristic.__init__(self, characteristic)
-        self.description_handle = self.handle + 1
-        self.write_handle = self.handle + 2
-        self._cached_description = self.read_description()
-
-    def read_description(self):
-        return self._original_characteristic.peripheral.readCharacteristic(self.description_handle).decode('utf-8')
+    def description_read(self):
+        description = self._description_read()
+        if isinstance(description, bytes):
+            return description.decode('utf-8')
+        return description
 
     @property
     def description(self):
-        return self._cached_description
+        return self._description_cache
+
+
+class SubscribableCharacteristic(Characteristic):
+
+    def __init__(self,
+                 characteristic: _Characteristic,
+                 subscription_handle_offset=1,
+                 listener_list=None,
+                 *args, **kwargs):
+        Characteristic.__init__(self, characteristic, *args, **kwargs)
+        self.listener_list = listener_list
+        self.subscription = Descriptor(self.peripheral, self.uuid, self.valHandle + subscription_handle_offset)
+
+    def subscribe(self):
+        if self.listener_list is not None and self not in self.listener_list:
+            self.listener_list.append(self)
+        self.subscription.write(b'\x01\x00')
+
+    def unsubscribe(self):
+        self.subscription.write(b'\x00\x00')
+        if self.listener_list is not None and self in self.listener_list:
+            self.listener_list.remove(self)
+
+    @property
+    def subscribed(self):
+        return self.subscription.read() != b'\x00\x00'
+
+
+class Uint8Service(SubscribableCharacteristic):
+
+    def __init__(self, srv: _Service, *args, **kwargs):
+        SubscribableCharacteristic.__init__(self,
+                                            characteristic=srv.getCharacteristics()[0],
+                                            byte_format='<B',
+                                            nbytes=1, *args, **kwargs)
+
+
+class Float32Service(SubscribableCharacteristic):
+
+    def __init__(self, srv: _Service, *args, **kwargs):
+        SubscribableCharacteristic.__init__(self,
+                                            characteristic=srv.getCharacteristics()[0],
+                                            description_handle_offset=1,
+                                            subscription_handle_offset=2,
+                                            byte_format='<f',
+                                            nbytes=1, *args, **kwargs)
 
 
 class LoggingService(object):
 
-    def __init__(self, srv: Service):
+    def __init__(self, srv: _Service, *args, **kwargs):
         chars = srv.getCharacteristics()
         assert len(chars) == 5
-        self.SyncTimeMs = DescribedCharacteristic(chars[0])
-        self.OldestTimestampMs = DescribedCharacteristic(chars[1])
-        self.NewestTimestampMs = DescribedCharacteristic(chars[2])
-        self.StartLoggerDownload = DescribedCharacteristic(chars[3])
-        self.LoggerIntervalMs = DescribedCharacteristic(chars[4])
+
+        self.SyncTimeMs = Characteristic(chars[0],
+                                         description_handle_offset=1,
+                                         byte_format='<Q', *args, **kwargs)
+        self.OldestTimestampMs = Characteristic(chars[1],
+                                                description_handle_offset=1,
+                                                byte_format='<Q', *args, **kwargs)
+        self.NewestTimestampMs = Characteristic(chars[2],
+                                                description_handle_offset=1,
+                                                byte_format='<Q', *args, **kwargs)
+        self.StartLoggerDownload = Characteristic(chars[3],
+                                                  description_handle_offset=1,
+                                                  byte_format='<B', *args, **kwargs)
+        self.LoggerIntervalMs = Characteristic(chars[4],
+                                               description_handle_offset=1,
+                                               byte_format='<I', *args, **kwargs)
+
+    @property
+    def description(self):
+        return "Logging Service"
 
     def start_download(self):
         log.info("initiate download....")
         interval = self.LoggerIntervalMs.read()
-        interval = struct.unpack('<I', interval)[0]
         log.info("read logging interval: {0} ms".format(interval))
 
-        self._srv.peripheral.writeCharacteristic(self.OldestTimestampMs.valHandle, struct.pack('<Q', 0))
+        self.OldestTimestampMs.write(0)
         log.info("wrote oldest timestamp: {0} ms".format(0))
 
-        oldest_time = self.OldestTimestampMs.read()
-        oldest_time = struct.unpack('<Q', oldest_time)[0]
-        log.info("read oldest timestamp: {0} ms".format(oldest_time))
-
         time_ms = int(time.time_ns() / 1000000.)
-        self._srv.peripheral.writeCharacteristic(self.SyncTimeMs.valHandle, struct.pack('<Q', time_ms))
+        self.SyncTimeMs.write(time_ms, expected_byte_count=4)
         log.info("wrote sync time: {} ms".format(time_ms))
 
+        time.sleep(0.5)
+
         newest_time = self.NewestTimestampMs.read()
-        newest_time = struct.unpack('<Q', newest_time)[0]
         log.info("read newest timestamp: {0} ms".format(newest_time))
+
+        oldest_time = self.OldestTimestampMs.read()
+        log.info("read oldest timestamp: {0} ms".format(oldest_time))
+
+        n_logging_samples = int((newest_time - oldest_time) / interval)
+        logging_time = datetime.timedelta(milliseconds=newest_time - oldest_time)
+        log.info("devices has {} samples ({}) in memory".format(n_logging_samples, logging_time))
+
         log.info("start download....")
-        self._srv.peripheral.writeCharacteristic(self.StartLoggerDownload.handle, struct.pack('<B', 1))
+        self.StartLoggerDownload.write(1, expected_byte_count=2)
 
 
-class SubscribableService(object):
-
-    def __init__(self, srv: Service):
-        self.characteristic = Characteristic(srv.getCharacteristics()[0])
-
-    @property
-    def handle(self):
-        return self.characteristic.handle
-
-    @staticmethod
-    def format_data(data):
-        return data[0]
-
-    def read(self):
-        return self.format_data(self.characteristic.read())
-
-    def subscribe(self):
-        self.characteristic.write(b'\x01\x00')
-
-    def unsubscribe(self):
-        self.characteristic.write(b'\x00\x00')
-
-
-class ValueService(SubscribableService):
-
-    def __init__(self, srv: Service):
-        self.characteristic = DescribedCharacteristic(srv.getCharacteristics()[0])
-
-    def read(self):
-        return self.format_data(self.characteristic.read())
-
-    @staticmethod
-    def format_data(data):
-        return struct.unpack('<f', data)[0]
-
-    @property
-    def description(self):
-        return self.characteristic.description
-
-
-class SmartGadget(BTLEDevice, DefaultDelegate):
+class SmartGadget(BLEDevice, DefaultDelegate):
 
     def __init__(self, device, addr_type=ADDR_TYPE_RANDOM, iface=None):
 
@@ -154,27 +202,44 @@ class SmartGadget(BTLEDevice, DefaultDelegate):
             log.info("Connect to {}...".format(device.addr))
         else:
             log.info("Connect to {}...".format(device))
-        BTLEDevice.__init__(self, device, addr_type, iface)
+
+        BLEDevice.__init__(self, device, addr_type, iface)
         log.info("Connected to {}!".format(device))
 
-        self.Temperature = ValueService(self.getServiceByUUID(UUID("00002234-b38d-4985-720e-0f993a68ee41")))
-        self.RelativeHumidity = ValueService(self.getServiceByUUID(UUID("00001234-b38d-4985-720e-0F993a68ee41")))
+        self.listeners = []
 
-        self.Battery = SubscribableService(self.getServiceByUUID(UUID("180F")))
+        self.Temperature = Float32Service(self.getServiceByUUID(UUID("00002234-b38d-4985-720e-0f993a68ee41")),
+                                          listener_list=self.listeners)
+        self.RelativeHumidity = Float32Service(self.getServiceByUUID(UUID("00001234-b38d-4985-720e-0F993a68ee41")),
+                                               listener_list=self.listeners)
+
+        self.Battery = Uint8Service(self.getServiceByUUID(UUID("180F")),
+                                    listener_list=self.listeners)
 
         self.Logging = LoggingService(self.getServiceByUUID(UUID("0000f234-b38d-4985-720e-0f993a68ee41")))
+
+        for service in [self.Temperature, self.RelativeHumidity, self.Battery, self.Logging]:
+            log.debug("Initiated: {}".format(service.description))
 
         self.withDelegate(self)
 
     def handleNotification(self, cHandle, data):
-        if cHandle == self.Temperature.handle:
-            log.info("Temperature: {:.2f}°C".format(self.Temperature.format_data(data)))
-        elif cHandle == self.RelativeHumidity.handle:
-            log.info("Relative Humidity: {:.2f}%".format(self.RelativeHumidity.format_data(data)))
-        elif cHandle == self.Battery.handle:
-            log.info("Battery Level: {:d}%".format(self.Battery.format_data(data)))
-        else:
-            log.info("received data: handle={}, data={}".format(cHandle, data))
+        for listener in self.listeners:
+            if cHandle == listener.getHandle():
+
+                if listener is self.Temperature:
+                    log.info("Temperature: {:.2f}°C".format(self.Temperature.unpack_data(data)))
+                    return
+
+                if listener is self.RelativeHumidity:
+                    log.info("Relative Humidity: {:.2f}%".format(self.RelativeHumidity.unpack_data(data)))
+                    return
+
+                if listener is self.Battery:
+                    log.info("Battery Level: {:d}%".format(self.Battery.unpack_data(data)))
+                    return
+
+        log.info("received data: handle={}, data={}".format(cHandle, data))
 
     def listen_for_notifications(self, seconds=None):
         if seconds is None:
@@ -207,5 +272,5 @@ class SmartGadget(BTLEDevice, DefaultDelegate):
 
     def disconnect(self):
         log.info("Disconnect from {}...".format(self.addr))
-        BTLEDevice.disconnect(self)
+        BLEDevice.disconnect(self)
         log.info("Disconnected from {}...".format(self.addr))
