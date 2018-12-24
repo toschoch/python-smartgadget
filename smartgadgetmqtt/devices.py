@@ -38,6 +38,7 @@ class Characteristic(_Characteristic):
     def __init__(self,
                  characteristic: _Characteristic,
                  description_handle_offset=None,
+                 unit=None,
                  byte_format=None, nbytes=1):
 
         _Characteristic.__init__(self,
@@ -49,6 +50,7 @@ class Characteristic(_Characteristic):
 
         self.byte_format = byte_format
         self.nbytes = nbytes
+        self._unit = unit
 
         if description_handle_offset is None:
             self._description_read = self.uuid.getCommonName
@@ -57,6 +59,12 @@ class Characteristic(_Characteristic):
             self._description_read = self._description_desc.read
 
         self._description_cache = self.description_read()
+
+    @property
+    def unit(self):
+        if self._unit is not None:
+            return self._unit
+        return self.description.split(' ')[-1]
 
     def unpack_data(self, bytes):
 
@@ -99,25 +107,33 @@ class SubscribableCharacteristic(Characteristic):
     def __init__(self,
                  characteristic: _Characteristic,
                  subscription_handle_offset=1,
-                 listener_list=None,
                  *args, **kwargs):
         Characteristic.__init__(self, characteristic, *args, **kwargs)
-        self.listener_list = listener_list
+        self._listeners = []
         self.subscription = Descriptor(self.peripheral, self.uuid, self.valHandle + subscription_handle_offset)
+        self._subscribed = self.subscription.read() != b'\x00\x00'
 
     def subscribe(self):
-        if self.listener_list is not None and self not in self.listener_list:
-            self.listener_list.append(self)
         self.subscription.write(b'\x01\x00')
+        self._subscribed = True
 
     def unsubscribe(self):
         self.subscription.write(b'\x00\x00')
-        if self.listener_list is not None and self in self.listener_list:
-            self.listener_list.remove(self)
+        self._subscribed = False
+
+    def register_listener(self, callback):
+        self._listeners.append(callback)
+
+    def unregister_listener(self, callback):
+        self._listeners.remove(callback)
+
+    def call_listeners(self, data):
+        for listener in self._listeners:
+            listener(self.unpack_data(data), self)
 
     @property
     def subscribed(self):
-        return self.subscription.read() != b'\x00\x00'
+        return self._subscribed
 
 
 class Uint8Service(SubscribableCharacteristic):
@@ -145,6 +161,7 @@ class LoggingService(object):
     n_samples_to_download: int
 
     DOWNLOAD_TIMEOUT=10
+    SEQUENCE_NUMBER_SIZE=4
 
     def __init__(self, srv: _Service, *args, **kwargs):
         chars = srv.getCharacteristics()
@@ -167,13 +184,17 @@ class LoggingService(object):
                                                description_handle_offset=1,
                                                byte_format='<I', *args, **kwargs)
 
-        self.data = []
+        self._reset_download()
+
+        self.data = {}
+        self.n_samples_downloaded = {}
+        self.n_samples_missed = {}
+
+    def _reset_download(self):
         self.oldest_time = 0
         self.newest_time = 0
         self.interval = 0
-
         self.n_samples_to_download = 0
-        self.n_samples_downloaded = 0
 
     @property
     def description(self):
@@ -206,66 +227,88 @@ class LoggingService(object):
         log.info("devices has {} samples ({}) in memory".format(n_samples_to_download, logging_time))
 
         log.info("start download....")
-        self.data.clear()
         self.oldest_time = oldest_time
         self.newest_time = newest_time
         self.interval = interval
+
         # set the delegate temporary to the logging service
         self.time_start_download = time.time()
         self.peripheral.withDelegate(self)
+
+        # create counter and data storage for all subscribed services
+        subscribed_services = [src for src in self.peripheral.subscribable_services if src.subscribed]
         self.n_samples_to_download = n_samples_to_download
+        self.n_samples_downloaded = dict(zip(subscribed_services, [n_samples_to_download]*len(subscribed_services)))
+        self.n_samples_missed = dict(zip(subscribed_services, [0]*len(subscribed_services)))
+        self.data = dict(zip(subscribed_services, [[]]*len(subscribed_services)))
+
         self.StartLoggerDownload.write(1)
 
     def _sample_number_to_time(self, sample):
-        return self.newest_time - (self.n_samples_to_download - sample) * self.interval
+        return self.newest_time - sample * self.interval
 
     def handleNotification(self, cHandle, data):
 
         log.debug("arrived a download notification: {}".format(cHandle))
         log.debug("data length: {}".format(len(data)))
 
-        if len(data)<=4:
+        for service in self.peripheral.subscribable_services:
+            if cHandle == service.getHandle():
+                return self._process_download_data(service, data)
+
+    def _process_download_data(self, srv: Characteristic, data):
+
+        if len(data)<=self.SEQUENCE_NUMBER_SIZE:
             if (time.time() - self.time_start_download) >= self.DOWNLOAD_TIMEOUT:
                 self.on_download_failed()
-            return self.peripheral.handleNotification(cHandle, data)
+            return srv.call_listeners(data)
 
-        seq_number = struct.unpack('<I',data[:4])[0]
+        seq_number = struct.unpack('<I',data[:self.SEQUENCE_NUMBER_SIZE])[0]
         log.debug("sequence {} arrived!".format(seq_number))
 
-        if seq_number != self.n_samples_downloaded+1:
+        log.debug("description: {}".format(srv.description))
+        next_seq_number = self.n_samples_downloaded[srv]+1
 
-            log.warning("download missed sequence {}! Continue with sequence {}".format(self.n_samples_downloaded+1,
+        if seq_number > next_seq_number:
+            self.n_samples_missed[srv] += (seq_number - next_seq_number)
+            log.warning("Download missed sequence {}! Continue with sequence {}".format(next_seq_number,
                                                                                         seq_number))
 
-        assert (len(data) - 4) % 4 == 0
-        seq_length = (len(data) - 4) // 4
+        size = struct.calcsize(srv.byte_format)
+        seq_bytes = len(data) - self.SEQUENCE_NUMBER_SIZE
+        seq_length = seq_bytes // size
+        assert seq_bytes % size == 0
 
-        stream = list((self._sample_number_to_time(seq_number + i-1), d[0]) for i, d in enumerate(struct.iter_unpack('<f',data[4:])))
+        stream = list((self._sample_number_to_time(seq_number + i-1),
+                       d[0]) for i, d in enumerate(struct.iter_unpack(srv.byte_format,
+                                                                      data[self.SEQUENCE_NUMBER_SIZE:])))
         assert len(stream) == seq_length
-        self.data.extend(stream)
+
+        # store data
+        self.data[srv].extend(stream)
 
         log.debug("sequence: {}".format(stream))
 
-        self.n_samples_downloaded = seq_number + seq_length - 1
+        self.n_samples_downloaded[srv] = seq_number + seq_length - 1
 
-        if (self.n_samples_to_download - self.n_samples_downloaded) == 0:
+        if all(self.n_samples_to_download - n == 0 for n in self.n_samples_downloaded.values()):
             self.on_download_finished()
-        elif (self.n_samples_to_download - self.n_samples_downloaded) < 0:
-            self.on_download_failed()
 
-
-    def on_download_failed(self):
-        pass
-        self.on_download_finished()
-
-    def on_download_finished(self):
+    def _stop_download(self):
         self.StartLoggerDownload.write(0)
         self.peripheral.withDelegate(self.peripheral)
-        log.info("Download finished! (expected: {}, downloaded: {}, {})".format(self.n_samples_to_download,
-                                                                            len(self.data),
-                                                                            self.n_samples_downloaded))
-        self.n_samples_to_download = 0
-        self.n_samples_downloaded = 0
+        log.info("Download finished!")
+
+        log.info("expected samples: {}".format(self.n_samples_to_download))
+        for srv, d in self.data.items():
+            log.info("downloaded: {}, missed: {}".format(len(d), self.n_samples_missed[srv]))
+        self._reset_download()
+
+    def on_download_failed(self):
+        self._stop_download()
+
+    def on_download_finished(self):
+        self._stop_download()
 
     @property
     def downloading(self):
@@ -273,9 +316,10 @@ class LoggingService(object):
 
     def progress(self):
         if self.n_samples_to_download > 0:
-            return float(self.n_samples_downloaded)*100./self.n_samples_to_download
+            return float(min(self.n_samples_downloaded.values())*100.)/self.n_samples_to_download
         else:
             return 0
+
 
 class SmartGadget(BLEDevice, DefaultDelegate):
 
@@ -287,42 +331,26 @@ class SmartGadget(BLEDevice, DefaultDelegate):
             log.info("Connect to {}...".format(device))
 
         BLEDevice.__init__(self, device, addr_type, iface)
+
         log.info("Connected to {}!".format(device))
 
-        self.listeners = []
-
-        self.Temperature = Float32Service(self.getServiceByUUID(UUID("00002234-b38d-4985-720e-0f993a68ee41")),
-                                          listener_list=self.listeners)
+        self.Temperature = Float32Service(self.getServiceByUUID(UUID("00002234-b38d-4985-720e-0f993a68ee41")))
         self.RelativeHumidity = Float32Service(self.getServiceByUUID(UUID("00001234-b38d-4985-720e-0F993a68ee41")),
-                                               listener_list=self.listeners)
+                                               unit="%")
 
-        self.Battery = Uint8Service(self.getServiceByUUID(UUID("180F")),
-                                    listener_list=self.listeners)
+        self.Battery = Uint8Service(self.getServiceByUUID(UUID("180F")), unit="%")
 
         self.Logging = LoggingService(self.getServiceByUUID(UUID("0000f234-b38d-4985-720e-0f993a68ee41")))
 
-        for service in [self.Temperature, self.RelativeHumidity, self.Battery, self.Logging]:
-            log.debug("Initiated: {}".format(service.description))
+        self.subscribable_services = [self.Temperature, self.RelativeHumidity, self.Battery]
 
         self.withDelegate(self)
 
     def handleNotification(self, cHandle, data):
-        for listener in self.listeners:
-            if cHandle == listener.getHandle():
-
-                if listener is self.Temperature:
-                    log.info("Temperature: {:.2f}°C".format(self.Temperature.unpack_data(data)))
-                    return
-
-                if listener is self.RelativeHumidity:
-                    log.info("Relative Humidity: {:.2f}%".format(self.RelativeHumidity.unpack_data(data)))
-                    return
-
-                if listener is self.Battery:
-                    log.info("Battery Level: {:d}%".format(self.Battery.unpack_data(data)))
-                    return
-
-        log.info("received data: handle={}, data={}".format(cHandle, data))
+        log.debug("received data: handle={}, data={}".format(cHandle, data))
+        for service in self.subscribable_services:
+            if cHandle == service.getHandle():
+                return service.call_listeners(data)
 
     def listen_for_notifications(self, seconds=None):
         if seconds is None:
