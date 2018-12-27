@@ -1,5 +1,5 @@
 from bluepy.btle import DefaultDelegate, Scanner
-from smartgadgetmqtt.devices import SmartGadget
+from smartgadgetmqtt.device import SmartGadget
 import logging
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class SmartGadgetScanner(DefaultDelegate, Scanner):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         if isNewDev:
             if is_smartgadget(dev):
-                log.info("Discovered smart gadget ({0}, {1} db)...".format(dev.addr, dev.rssi))
+                log.debug("Discovered smart gadget ({0}, {1} db)...".format(dev.addr, dev.rssi))
                 self._gadgets[dev.addr] = SmartGadget(dev)
                 dev.present = True
                 return

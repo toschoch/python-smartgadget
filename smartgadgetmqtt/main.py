@@ -3,8 +3,8 @@ import datetime
 from apscheduler.schedulers.background import BlockingScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 
-from smartgadgetmqtt.devices import SmartGadget
-from smartgadgetmqtt.ble_scanner import SmartGadgetScanner
+from smartgadgetmqtt.device import SmartGadget
+from smartgadgetmqtt.scanner import SmartGadgetScanner
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     class AppendSmartGadget(SmartGadgetScanner):
 
-        def __init__(self, gadgets, jobs):
+        def __init__(self, gadgets={}, jobs={}):
             SmartGadgetScanner.__init__(self, gadgets)
             self.jobs = jobs
 
@@ -52,10 +52,7 @@ if __name__ == '__main__':
             dev.disconnect()
 
 
-    gadgets = {}
-    jobs = {}
-
-    scanner = AppendSmartGadget(gadgets, jobs)
+    scanner = AppendSmartGadget()
 
     scheduler.add_job(scanner.scan, 'interval', minutes=5, args=(10,),
                       start_date=datetime.datetime.now()+datetime.timedelta(seconds=1))
