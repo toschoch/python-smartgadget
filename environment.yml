@@ -5,27 +5,29 @@ channels:
 dependencies:
   - apscheduler=3.5.3=py37_1000
   - bzip2=1.0.6=h470a237_2
-  - ca-certificates=2018.11.29=ha4d7672_0
-  - certifi=2018.11.29=py37_1000
   - libffi=3.2.1=3
   - ncurses=6.1=hfc679d8_1
-  - openssl=1.0.2p=h470a237_1
   - pip=18.0=py37_1
-  - python=3.7.0=h5001a0f_0
   - pytz=2018.7=py_0
   - readline=7.0=haf1bffa_1
   - setuptools=40.0.0=py37_1
   - six=1.12.0=py37_1000
-  - sqlite=3.24.0=h2f33b56_0
   - tk=8.6.8=0
   - tzlocal=1.5.1=py_0
   - wheel=0.31.1=py37_1
   - xz=5.2.4=h470a237_1
   - yaml=0.1.7=h470a237_1
   - zlib=1.2.11=h470a237_3
-  - libgcc-ng=7.2.0=hdf63c60_3
-  - libstdcxx-ng=7.2.0=hdf63c60_3
+  - ca-certificates=2018.03.07=0
+  - certifi=2018.11.29=py37_0
+  - libedit=3.1.20170329=h6b74fdf_2
+  - libgcc-ng=8.2.0=hdf63c60_1
+  - libstdcxx-ng=8.2.0=hdf63c60_1
+  - openssl=1.1.1a=h7b6447c_0
+  - python=3.7.1=h0371630_7
   - pyyaml=3.13=py37h14c3975_0
+  - sqlalchemy=1.2.15=py37h7b6447c_0
+  - sqlite=3.26.0=h7b6447c_0
   - pip:
     - alabaster==0.7.11
     - babel==2.6.0

@@ -1,43 +1,70 @@
-from bluepy.btle import Scanner, ADDR_TYPE_RANDOM
-import time
-import struct
 import logging
-from queue import Queue
-import apscheduler as aps
-from smartgadgetmqtt import devices as devs
-from smartgadgetmqtt import ble_scanner as sc
+import datetime
+from apscheduler.schedulers.background import BlockingScheduler
+from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
+from smartgadgetmqtt.devices import SmartGadget
+from smartgadgetmqtt.ble_scanner import SmartGadgetScanner
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
 if __name__ == '__main__':
 
-    gadgets = sc.SmartGadgetScanner().scan()
+    scheduler = BlockingScheduler(
+        executors={
+            'default': ThreadPoolExecutor(5),
+            'process': ProcessPoolExecutor(max_workers=1)})
 
-    ph = devs.SmartGadget('f2:70:95:f3:43:44')
-    #ph2 = devs.SmartGadget('e2:07:bc:53:40:61')
+    class AppendSmartGadget(SmartGadgetScanner):
 
-    print("T=%.2f%s" % (ph.read_temperature(), ph.Temperature.unit))
-    print("RH=%.2f%s" % (ph.read_relative_humidity(), ph.RelativeHumidity.unit))
-    b = ph.read_battery_level()
-    print("battery=%d%%"%b)
+        def __init__(self, gadgets, jobs):
+            SmartGadgetScanner.__init__(self, gadgets)
+            self.jobs = jobs
 
-    #ph.subscribe_battery_level()
-    ph.subscribe_relative_humidity()
+        def on_appearance(self, dev: SmartGadget):
+            logging.info("appearance {}".format(dev))
 
-    ph.Temperature.register_listener(lambda v, srv: logging.info("Temperature: {:.2f}{}".format(v, srv.unit)))
-    ph.RelativeHumidity.register_listener(lambda v, srv: logging.info("Humidity: {:.2f}{}".format(v, srv.unit)))
+            if dev.addr not in self.jobs:
+                logging.info("add download for {}".format(dev))
+                job = scheduler.add_job(AppendSmartGadget.download,
+                                        'interval',
+                                        args=(dev,),
+                                        hours=4,
+                                        coalesce=True,
+                                        start_date=datetime.datetime.now() + datetime.timedelta(seconds=1),
+                                        executor='process',
+                                        misfire_grace_time=120)
+                self.jobs[dev.addr] = job
 
-    ph.subscribe_temperature()
+            else:
+                logging.info("resume download for {}".format(dev))
+                self.jobs[dev.addr].resume()
 
-    ph.Logging.start_download()
+        def on_disappearance(self, dev: SmartGadget):
+            logging.info("pause download for {}".format(dev))
+            self.jobs[dev.addr].pause()
 
-    while ph.Logging.downloading:
-        ph.listen_for_notifications(0.5)
-        if ph.Logging.downloading:
-            logging.info("downloading {:.0f}%".format(ph.Logging.progress()))
+        @staticmethod
+        def download(dev: SmartGadget):
+            dev.connect()
+            logging.info("{}, Battery: {:02d}%".format(dev, dev.Battery.read()))
+            logging.info("{}".format(dev.download_temperature_and_relative_humidity()))
+            dev.disconnect()
 
-    print(len(ph.Logging.data))
-    print(len(list(ph.Logging.data.values())[0]))
-    print(ph.Logging.data)
 
-    ph.listen_for_notifications(5)
+    gadgets = {}
+    jobs = {}
+
+    scanner = AppendSmartGadget(gadgets, jobs)
+
+    scheduler.add_job(scanner.scan, 'interval', minutes=5, args=(10,),
+                      start_date=datetime.datetime.now()+datetime.timedelta(seconds=1))
+
+    scheduler.start()
+
+    # scanner = SmartGadgetScanner()
+    # scanner.scan(3)
+    #
+    # g = list(scanner.gadgets.values())[0]
+    # g.connect()
+    # g.download_temperature_and_relative_humidity()
