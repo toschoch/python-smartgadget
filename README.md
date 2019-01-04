@@ -1,6 +1,6 @@
 Python API for Sensirion BLE Smartgadget
 ========================================
-author: Tobias Schoch
+author: Tobias Schoch [![Build Status](https://drone.github.dietzi.mywire.org/api/badges/toschoch/python-smartgadget/status.svg)](https://drone.github.dietzi.mywire.org/toschoch/python-smartgadget)
 
 Overview
 --------
