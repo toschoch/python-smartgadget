@@ -5,9 +5,7 @@ author: Tobias Schoch
 Overview
 --------
 
-Provides functions to scan for and access nearby [Sensirion Smartgadgets][1]
-through the [BluePy][2] BLE interface for Python.
-Temperature/Humdity readings as well as logging functionality is supported.
+Provides functions to scan for and access nearby [Sensirion BLE Smartgadgets][1] through the [BluePy][2] BLE interface for Python. Temperature and humdity readings as well as logging functionality is supported.
 
 Change-Log
 ----------
