@@ -3,7 +3,6 @@ from codecs import open
 from os import path, environ
 here = path.abspath(path.dirname(__file__))
 
-conda_env_file = "environment.yml"
 readme_file = "README.md"
 pip_req_file = "requirements.txt"
 
@@ -37,7 +36,7 @@ setup(
     name='smartgadget',
     version_format='{tag}.dev{commitcount}+{gitsha}',
     setup_requires=['pytest-runner','setuptools-git-version'],
-    description='Reads temperature and humidity values from a Sensirion Smartgadget BLE device and broadcasts them to a MQTT broker',
+    description='Python API for Sensirion BLE SmartGadgets',
     long_description=long_description,
     classifiers=[
       'Development Status :: 3 - Alpha',
