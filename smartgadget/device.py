@@ -5,7 +5,7 @@ from bluepy.btle import DefaultDelegate, \
 import binascii
 import time
 import logging
-from smartgadgetmqtt.services import Float32Service, Uint8Service, LoggingService
+from smartgadget.services import Float32Service, Uint8Service, LoggingService
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class SmartGadget(DefaultDelegate):
         if isinstance(device, ScanEntry):
             self.addr, self.addrType, self.iface = device.addr, device.addrType, device.iface
         else:
-            self.addr, self.addrType, self.iface = UUID(device), ADDR_TYPE_RANDOM, None
+            self.addr, self.addrType, self.iface = device, ADDR_TYPE_RANDOM, None
 
         self.Temperature = Float32Service("00002234-b38d-4985-720e-0f993a68ee41")
         self.RelativeHumidity = Float32Service("00001234-b38d-4985-720e-0F993a68ee41",
@@ -89,7 +89,7 @@ class SmartGadget(DefaultDelegate):
     def read_battery_level(self):
         return self.Battery.read()
 
-    def download_temperature_and_relative_humidity(self):
+    def download_temperature_and_relative_humidity(self, timeout=15):
         if not self.is_connected():
             raise Exception("Gadget is not connected!")
         self.Temperature.subscribe()
@@ -97,10 +97,13 @@ class SmartGadget(DefaultDelegate):
 
         self.Logging.start_download()
 
+        t0 = time.time()
         while self.Logging.downloading:
             self.listen_for_notifications(0.5)
             if self.Logging.downloading:
-                logging.info("downloading {:.0f}%".format(self.Logging.progress()))
+                log.info("downloading {:.0f}%".format(self.Logging.progress()))
+            if (time.time()-t0) > timeout:
+                break
 
         self.Temperature.unsubscribe()
         self.RelativeHumidity.unsubscribe()

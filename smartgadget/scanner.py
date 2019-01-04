@@ -1,5 +1,5 @@
 from bluepy.btle import DefaultDelegate, Scanner
-from smartgadgetmqtt.device import SmartGadget
+from smartgadget.device import SmartGadget
 import logging
 log = logging.getLogger(__name__)
 

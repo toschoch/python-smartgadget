@@ -1,8 +1,9 @@
-from bluepy.btle import Characteristic as _Characteristic, Service as _Service, Descriptor, UUID, Peripheral
-import struct
-import time
 import datetime
 import logging
+import struct
+import time
+
+from bluepy.btle import Characteristic as _Characteristic, Descriptor, UUID
 
 log = logging.getLogger(__name__)
 
@@ -201,6 +202,7 @@ class LoggingService(Service):
         self._old_delegate = None
 
     def _reset_download(self):
+        self.missed_sequences = {}
         self.oldest_time = 0
         self.newest_time = 0
         self.interval = 0
@@ -213,6 +215,7 @@ class LoggingService(Service):
     def start_download(self):
 
         log.info("initiate download....")
+        self._reset_download()
 
         interval = self.LoggerIntervalMs.read()
         log.info("read logging interval: {0} ms".format(interval))
@@ -254,8 +257,10 @@ class LoggingService(Service):
         self.data = {}
         for srv in subscribed_services:
             self.data[srv] = list()
+            self.missed_sequences[srv] = list()
 
         self.StartLoggerDownload.write(1)
+
 
     def _sample_number_to_time(self, sample):
         return self.newest_time - sample * self.interval
@@ -282,17 +287,21 @@ class LoggingService(Service):
         log.debug("description: {}".format(srv.description))
         next_seq_number = self.n_samples_downloaded[srv]+1
 
-        if seq_number > next_seq_number:
-            self.n_samples_missed[srv] += (seq_number - next_seq_number)
-            log.warning("Download missed sequence {}! Continue with sequence {}".format(next_seq_number,
-                                                                                        seq_number))
-
         size = struct.calcsize(srv.byte_format)
         seq_bytes = len(data) - self.SEQUENCE_NUMBER_SIZE
         seq_length = seq_bytes // size
         assert seq_bytes % size == 0
 
-        stream = list((self._sample_number_to_time(seq_number + i-1),
+        if seq_number > next_seq_number:
+            self.n_samples_missed[srv] += (seq_number - next_seq_number)
+            self.missed_sequences[srv].extend(range(next_seq_number, seq_number, seq_length))
+            log.debug("Download missed sequence {}! Continue with sequence {}".format(next_seq_number,
+                                                                                        seq_number))
+        if seq_number in self.missed_sequences[srv]:
+            self.missed_sequences[srv].remove(seq_number)
+
+        stream = list((seq_number + i-1,
+                       self._sample_number_to_time(seq_number + i-1),
                        d[0]) for i, d in enumerate(struct.iter_unpack(srv.byte_format,
                                                                       data[self.SEQUENCE_NUMBER_SIZE:])))
         assert len(stream) == seq_length
@@ -315,7 +324,9 @@ class LoggingService(Service):
         log.info("expected samples: {}".format(self.n_samples_to_download))
         for srv, d in self.data.items():
             log.info("{}: downloaded {}, missed {}".format(srv.description, len(d), self.n_samples_missed[srv]))
-        self._reset_download()
+            log.info("missed sequences ({}) {}".format(len(self.missed_sequences[srv])*4,
+                                                       self.missed_sequences[srv]))
+        self.n_samples_to_download = 0
 
     def on_download_failed(self):
         self._stop_download()
