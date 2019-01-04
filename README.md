@@ -29,12 +29,12 @@ Installation / Usage
 
 To install use pip:
 
-    pip install <git-url>
+    pip install https://github.com/toschoch/python-smartgadget.git
 
 
 Or clone the repo:
 
-    git clone <git-url>
+    git clone https://github.com/toschoch/python-smartgadget.git
     python setup.py install
     
 Contributing
