@@ -5,7 +5,7 @@ from bluepy.btle import DefaultDelegate, \
 import binascii
 import time
 import logging
-from smartgadget.services import Float32Service, Uint8Service, LoggingService
+from .services import Float32Service, Uint8Service, LoggingService
 
 log = logging.getLogger(__name__)
 
