@@ -13,14 +13,14 @@ steps:
   - name: test
     image: python:3-alpine
     commands:
-      - apk update && apk add --no-cache git build-essential libglib2.0-dev
+      - apk update && apk add --no-cache git build-base libglib2.0-dev
       - pip install --upgrade pip setuptools wheel
       - python setup.py test
 
   - name: build
     image: python:3-alpine
     commands:
-      - apk update && apk add --no-cache git build-essential libglib2.0-dev
+      - apk update && apk add --no-cache git build-base libglib2.0-dev
       - pip install --upgrade pip setuptools wheel
       - python setup.py bdist_wheel
       - python setup.py sdist --formats=zip
