@@ -35,7 +35,9 @@ dependency_links = [x.strip() for x in all_reqs if x.startswith('git+')]
 setup(
     name='smartgadget',
     version_format='{tag}.dev{commitcount}+{gitsha}',
-    setup_requires=['pytest-runner','setuptools-git-version'],
+    setup_requires=['pytest-runner',
+                    'setuptools-git-version',
+                    'pytest-mock'],
     description='Python API for Sensirion BLE SmartGadgets',
     long_description=long_description,
     classifiers=[

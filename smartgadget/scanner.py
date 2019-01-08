@@ -12,9 +12,9 @@ def is_smartgadget(dev):
 
 
 class SmartGadgetScanner(DefaultDelegate, Scanner):
-    def __init__(self, store={}):
+    def __init__(self, iface=0, store={}):
         DefaultDelegate.__init__(self)
-        Scanner.__init__(self)
+        Scanner.__init__(self, iface=iface)
         self.gadgets = store
         self._gadgets = {}
         self.withDelegate(self)

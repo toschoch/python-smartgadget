@@ -1,6 +1,8 @@
 Python API for Sensirion BLE Smartgadget
 ========================================
-author: Tobias Schoch [![Build Status](https://drone.github.dietzi.mywire.org/api/badges/toschoch/python-smartgadget/status.svg)](https://drone.github.dietzi.mywire.org/toschoch/python-smartgadget)
+[![Build Status](https://drone.github.dietzi.mywire.org/api/badges/toschoch/python-smartgadget/status.svg)](https://drone.github.dietzi.mywire.org/toschoch/python-smartgadget)
+
+author: Tobias Schoch 
 
 Overview
 --------
@@ -35,15 +37,24 @@ Or clone the repo:
     git clone https://github.com/toschoch/python-smartgadget.git
     python setup.py install
     
-Contributing
-------------
-
-TBD
 
 Example
 -------
 
-TBD
+```python
+from smartgadget.scanner import SmartGadgetScanner
+
+scanner = SmartGadgetScanner()
+
+gadgets = scanner.scan(5) # scan 5 seconds for nearby gadgets
+
+for addr, gadget in gadgets.items():
+    gadget.connect()
+    print("Gadget ({}): {:.1f}{}".format(addr, 
+                                         gadget.readTemperature(), 
+                                         gadget.Temperature.unit)
+ 
+```
 
 
 [1]: https://www.sensirion.com/de/umweltsensoren/feuchtesensoren/development-kit/
