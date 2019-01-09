@@ -220,7 +220,7 @@ class LoggingService(Service):
         self.OldestTimestampMs.write(0)
         log.info("wrote oldest timestamp: {0} ms".format(0))
 
-        time_ms = int(time.time_ns() / 1000000.)
+        time_ms = int(time.time() * 1000.)
         self.SyncTimeMs.write(time_ms)
         log.info("wrote sync time: {} ms".format(time_ms))
 
