@@ -161,8 +161,6 @@ class Float32Service(Service, SubscribableCharacteristic):
 
 class LoggingService(Service):
 
-    n_samples_to_download = 0
-
     DOWNLOAD_TIMEOUT = 10
     SEQUENCE_NUMBER_SIZE = 4
 
