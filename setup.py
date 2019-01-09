@@ -37,7 +37,7 @@ setup(
     version_format='{tag}.dev{commitcount}+{gitsha}',
     setup_requires=['pytest-runner',
                     'setuptools-git-version',
-                    'pytest-mock'],
+                    'pytest-mock','mock'],
     description='Python API for Sensirion BLE SmartGadgets',
     long_description=long_description,
     classifiers=[
