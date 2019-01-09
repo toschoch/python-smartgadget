@@ -1,12 +1,13 @@
 from bluepy.btle import DefaultDelegate, Scanner
 from .device import SmartGadget
 import logging
+
 log = logging.getLogger(__name__)
 
 
 def is_smartgadget(dev):
     for (a, d, v) in dev.getScanData():
-        if d == "Complete Local Name" and v== "Smart Humigadget":
+        if d == "Complete Local Name" and v == "Smart Humigadget":
             return True
     return False
 

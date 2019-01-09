@@ -4,4 +4,5 @@ Usage
 
 To use Sensirion Smartgadget MQTT Broadcast in a project::
 
-    import smartgadgetmqtt
+    import smartgadget
+

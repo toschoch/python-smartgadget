@@ -135,7 +135,7 @@ def add_int_to_part_of_uuid(uuid, value, part=0):
     uuid = UUID(uuid)
     parts = str(uuid).split('-')
     fmt = "{:0" + str(len(parts[part])) + "x}"
-    parts[part] = fmt.format(int(parts[part], 16)+value)
+    parts[part] = fmt.format(int(parts[part], 16) + value)
     return UUID("-".join(parts))
 
 
@@ -160,7 +160,6 @@ class Float32Service(Service, SubscribableCharacteristic):
 
 
 class LoggingService(Service):
-
     DOWNLOAD_TIMEOUT = 10
     SEQUENCE_NUMBER_SIZE = 4
 
@@ -250,15 +249,14 @@ class LoggingService(Service):
         # create counter and data storage for all subscribed services
         subscribed_services = [src for src in self.subscribables if src.subscribed]
         self.n_samples_to_download = n_samples_to_download
-        self.n_samples_downloaded = dict(zip(subscribed_services, [n_samples_to_download]*len(subscribed_services)))
-        self.n_samples_missed = dict(zip(subscribed_services, [0]*len(subscribed_services)))
+        self.n_samples_downloaded = dict(zip(subscribed_services, [n_samples_to_download] * len(subscribed_services)))
+        self.n_samples_missed = dict(zip(subscribed_services, [0] * len(subscribed_services)))
         self.data = {}
         for srv in subscribed_services:
             self.data[srv] = list()
             self.missed_sequences[srv] = list()
 
         self.StartLoggerDownload.write(1)
-
 
     def _sample_number_to_time(self, sample):
         return self.newest_time - sample * self.interval
@@ -274,16 +272,16 @@ class LoggingService(Service):
 
     def _process_download_data(self, srv: Characteristic, data):
 
-        if len(data)<=self.SEQUENCE_NUMBER_SIZE:
+        if len(data) <= self.SEQUENCE_NUMBER_SIZE:
             if (time.time() - self.time_start_download) >= self.DOWNLOAD_TIMEOUT:
                 self.on_download_failed()
             return srv.call_listeners(data)
 
-        seq_number = struct.unpack('<I',data[:self.SEQUENCE_NUMBER_SIZE])[0]
+        seq_number = struct.unpack('<I', data[:self.SEQUENCE_NUMBER_SIZE])[0]
         log.debug("sequence {} arrived!".format(seq_number))
 
         log.debug("description: {}".format(srv.description))
-        next_seq_number = self.n_samples_downloaded[srv]+1
+        next_seq_number = self.n_samples_downloaded[srv] + 1
 
         size = struct.calcsize(srv.byte_format)
         seq_bytes = len(data) - self.SEQUENCE_NUMBER_SIZE
@@ -294,12 +292,12 @@ class LoggingService(Service):
             self.n_samples_missed[srv] += (seq_number - next_seq_number)
             self.missed_sequences[srv].extend(range(next_seq_number, seq_number, seq_length))
             log.debug("Download missed sequence {}! Continue with sequence {}".format(next_seq_number,
-                                                                                        seq_number))
+                                                                                      seq_number))
         if seq_number in self.missed_sequences[srv]:
             self.missed_sequences[srv].remove(seq_number)
 
-        stream = list((seq_number + i-1,
-                       self._sample_number_to_time(seq_number + i-1),
+        stream = list((seq_number + i - 1,
+                       self._sample_number_to_time(seq_number + i - 1),
                        d[0]) for i, d in enumerate(struct.iter_unpack(srv.byte_format,
                                                                       data[self.SEQUENCE_NUMBER_SIZE:])))
         assert len(stream) == seq_length
@@ -322,7 +320,7 @@ class LoggingService(Service):
         log.info("expected samples: {}".format(self.n_samples_to_download))
         for srv, d in self.data.items():
             log.info("{}: downloaded {}, missed {}".format(srv.description, len(d), self.n_samples_missed[srv]))
-            log.info("missed sequences ({}) {}".format(len(self.missed_sequences[srv])*4,
+            log.info("missed sequences ({}) {}".format(len(self.missed_sequences[srv]) * 4,
                                                        self.missed_sequences[srv]))
         self.n_samples_to_download = 0
 
@@ -338,6 +336,6 @@ class LoggingService(Service):
 
     def progress(self):
         if self.n_samples_to_download > 0:
-            return float(min(self.n_samples_downloaded.values())*100.)/self.n_samples_to_download
+            return float(min(self.n_samples_downloaded.values()) * 100.) / self.n_samples_to_download
         else:
             return 0

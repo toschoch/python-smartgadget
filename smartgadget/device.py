@@ -1,10 +1,11 @@
+import binascii
+import logging
+import time
+
 from bluepy.btle import DefaultDelegate, \
     Peripheral, BTLEException, ScanEntry, \
-    UUID, ADDR_TYPE_RANDOM
+    ADDR_TYPE_RANDOM
 
-import binascii
-import time
-import logging
 from .services import Float32Service, Uint8Service, LoggingService
 
 log = logging.getLogger(__name__)
@@ -102,7 +103,7 @@ class SmartGadget(DefaultDelegate):
             self.listen_for_notifications(0.5)
             if self.Logging.downloading:
                 log.info("downloading {:.0f}%".format(self.Logging.progress()))
-            if (time.time()-t0) > timeout:
+            if (time.time() - t0) > timeout:
                 break
 
         self.Temperature.unsubscribe()

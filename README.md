@@ -52,7 +52,7 @@ for addr, gadget in gadgets.items():
     gadget.connect()
     print("Gadget ({}): {:.1f}{}".format(addr, 
                                          gadget.readTemperature(), 
-                                         gadget.Temperature.unit)
+                                         gadget.Temperature.unit))
  
 ```
 

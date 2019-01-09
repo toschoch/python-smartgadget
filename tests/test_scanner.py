@@ -6,7 +6,8 @@ import mock
 
 # Sample Test passing with nose and pytest
 def test_scan(mocker):
-    pass
+    sc = SmartGadgetScanner()
+    #sc.scan(1)
     # scanner = SmartGadgetScanner()
     # mocker.patch.object(scanner,'_helper', return_value='Test')
     # mocker.patch.object(scanner,'_startHelper')
