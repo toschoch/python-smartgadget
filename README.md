@@ -11,6 +11,33 @@ Provides functions to scan for and access nearby [Sensirion BLE Smartgadgets][1]
 
 Change-Log
 ----------
+##### 1.0.0
+* add a test for the scanner
+* fixed not existing time_ns() -> time()
+* removed mutable default argument, cannot pass store anymore to scanner
+* code reformatting
+* removed unnesseary declaration
+* made compatible with python 3.5
+* added basic tests
+* remove the pip-reqs, etc again
+* changed build env to python:3
+* glib-dev for alpine
+* build-base for alpine
+* fixed build env in drone and import
+* added build status to readme
+* updated readme
+* update readme
+* renamed project
+* moved everything not related to the smartgadget driver to the docker application
+* renamed modules
+* working scheduler setup for repeated scanning the devices and data download
+* fixed for arbitrary subscribed services
+* connect to two devices instantaneously
+* working download for one FloatService
+* redesigned for correct service / characteristics
+* redesigned for working download
+* separated into scanner module and device module
+
 ##### 0.0.3
 * added dummy .secrets file for local drone execution
 * added tagging stage and secrets
