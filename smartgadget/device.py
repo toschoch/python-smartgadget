@@ -20,6 +20,8 @@ class SmartGadget(DefaultDelegate):
 
         if isinstance(device, ScanEntry):
             self.addr, self.addrType, self.iface = device.addr, device.addrType, device.iface
+            self.rssi = device.rssi
+
         else:
             self.addr, self.addrType, self.iface = device, ADDR_TYPE_RANDOM, None
 

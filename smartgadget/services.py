@@ -88,7 +88,7 @@ class SubscribableCharacteristic(Characteristic):
                  *args, **kwargs):
         Characteristic.__init__(self, *args, **kwargs)
         self.subscription_handle_offset = subscription_handle_offset
-        self._listeners = []
+        self.listeners = []
 
     def connect_to(self, chr: _Characteristic):
         Characteristic.connect_to(self, chr)
@@ -104,13 +104,13 @@ class SubscribableCharacteristic(Characteristic):
         self._subscribed = False
 
     def register_listener(self, callback):
-        self._listeners.append(callback)
+        self.listeners.append(callback)
 
     def unregister_listener(self, callback):
-        self._listeners.remove(callback)
+        self.listeners.remove(callback)
 
     def call_listeners(self, data):
-        for listener in self._listeners:
+        for listener in self.listeners:
             listener(self.unpack_data(data), self)
 
     @property
